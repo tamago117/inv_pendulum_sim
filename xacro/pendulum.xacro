@@ -1,0 +1,107 @@
+<?xml version="1.0"?>
+<robot name="dtw_robot" xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:arg name="robot_name" default="dtw_robot"/>
+  <xacro:include filename="$(find inv_pendulum_sim)/xacro/imu_macro.xacro" />
+  <material name="gray">
+    <color rgba="0.5 0.5 0.5 2.5"/>
+  </material>
+  <material name="red">
+    <color rgba="1.0 0.0 0.0 2.5"/>
+  </material>
+
+  <xacro:macro name="wheel_macro" params="parent prefix xyz">
+    <joint name="${prefix}_joint" type="continuous">
+      <origin xyz="${xyz}" rpy="${radians(-90)} 0 0"/>
+      <parent link="${parent}"/>
+      <child  link="${prefix}_link"/>
+      <axis xyz="0 0 1" />
+      <limit velocity="24.0" effort="0.4" />
+      <dynamics damping="0.1"/>
+    </joint>
+    <transmission name="${prefix}_trans" type="SimpleTransmission">
+      <type>transmission_interface/SimpleTransmission</type>
+        <actuator name="${prefix}_motor">
+          <mechanicalReduction>1</mechanicalReduction>
+        </actuator>
+      <joint name="${prefix}_joint">
+        <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+      </joint>
+    </transmission>
+    <link name="${prefix}_link">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="0.03"/>
+        <inertia ixx="0.0001" ixy="0.0" ixz="0.0" iyy="0.0001" iyz="0.0" izz="0.0001"/>
+      </inertial>
+      <visual>
+        <geometry>
+          <cylinder radius="0.05" length="0.04" />
+        </geometry>
+        <material name="gray"/>
+      </visual>
+      <collision>
+        <geometry>
+          <cylinder radius="0.05" length="0.04" />
+        </geometry>
+      </collision>
+    </link>
+    <gazebo reference="${prefix}_link">
+      <material>Gazebo/Gray</material>
+      <mu1 value="2.5" />
+      <mu2 value="2.5" />
+      <kp value="50000" />
+      <kd value="10" />
+    </gazebo>
+  </xacro:macro> 
+
+  <link name="base_link"/>
+
+  <joint name="body_joint" type="fixed">
+    <parent link="base_link"/>
+    <child  link="body_link"/>
+    <origin xyz="0 0 0.15" rpy="0 0 0"/>
+  </joint>
+  <link name="body_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1.0"/>
+      <inertia ixx="0.0016" ixy="0.0" ixz="0.0" iyy="0.004" iyz="0.0" izz="0.003"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.08 0.18 0.22" />
+      </geometry>
+      <material name="red" />
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.08 0.178 0.22" />
+      </geometry>
+    </collision>
+  </link>
+  <gazebo reference="body_link">
+    <material>Gazebo/Red</material>
+  </gazebo>
+
+  <xacro:wheel_macro prefix="left_wheel"  parent="base_link" xyz="0 0.11 0.05"/>
+  <xacro:wheel_macro prefix="right_wheel" parent="base_link" xyz="0 -0.11 0.05"/>
+  <xacro:imu_macro prefix="imu" parent="base_link" xyz="0 0 0.20" robot_name="$(arg robot_name)"/>
+
+  <gazebo>
+    <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+      <robotNamespace>/dtw_robot</robotNamespace>
+      <robotSimType>gazebo_ros_control/DefaultRobotHWSim</robotSimType>
+      <legacyModeNS>true</legacyModeNS>
+    </plugin>
+  </gazebo>
+  <gazebo>
+    <plugin name="ground_truth" filename="libgazebo_ros_p3d.so">
+      <frameName>world</frameName>
+      <bodyName>base_link</bodyName>
+      <topicName>/tracker</topicName>
+      <updateRate>10.0</updateRate>
+    </plugin>
+  </gazebo>
+</robot>
